@@ -47,7 +47,8 @@ class TeamService:
             "token_invalidated", 
             "account_suspended", 
             "account_not_found",
-            "user_not_found"
+            "user_not_found",
+            "deactivated_workspace"
         }
         is_banned = error_code in ban_codes
         
@@ -63,14 +64,17 @@ class TeamService:
                 "account was deleted",
                 "user_not_found",
                 "session_invalidated",
-                "this account is deactivated"
+                "this account is deactivated",
+                "deactivated_workspace"
             ]
             if any(kw in error_msg for kw in ban_keywords):
                 is_banned = True
                 
         if is_banned:
             # 简化状态描述判断
-            if any(x in error_msg for x in ["deactivated", "suspended", "not found", "deleted"]):
+            if "workspace" in error_msg or "workspace" in (error_code or ""):
+                status_desc = "到期"
+            elif any(x in error_msg for x in ["deactivated", "suspended", "not found", "deleted"]):
                 status_desc = "封禁"
             else:
                 status_desc = "失效"
