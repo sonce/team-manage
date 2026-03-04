@@ -218,6 +218,9 @@ class RedeemFlowService:
                 logger.error(f"兑换前置校验异常: {e}")
                 if attempt < max_retries - 1: continue
                 return {"success": False, "error": f"系统校验异常: {str(e)}"}
+            # 确保会话回到干净状态，防止 Phase 0 的隐式事务导致 begin() 报错
+            if db_session.in_transaction():
+                await db_session.commit()
 
             team_id_final = None
             try:
@@ -371,6 +374,9 @@ class RedeemFlowService:
                         logger.error(f"检测到“虚假成功”: Team {team_id_final} 接口返回邀请成功，但同步成员列表未见该邮箱 {email}")
                         
                         # 手动标记错误并累加计数
+                        if db_session.in_transaction():
+                            await db_session.rollback()
+                            
                         async with db_session.begin():
                             stmt = select(Team).where(Team.id == team_id_final).with_for_update()
                             res = await db_session.execute(stmt)
